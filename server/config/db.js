@@ -1,5 +1,8 @@
 import pg from 'pg';
 
+// Disable SSL authorization checking for self-signed certificates
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 const { Pool } = pg;
 
 // Initialize connection pool
