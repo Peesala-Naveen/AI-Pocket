@@ -26,8 +26,25 @@ export default function AIVaultContainer({ vaultState, onToggle, modelCount }) {
       rotX.set(targetX);
     };
 
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 0) return;
+      const touch = e.touches[0];
+      const xPercent = touch.clientX / window.innerWidth;
+      const yPercent = touch.clientY / window.innerHeight;
+
+      const targetY = (xPercent - 0.5) * 360;
+      const targetX = -(yPercent - 0.5) * 360;
+
+      rotY.set(targetY);
+      rotX.set(targetX);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+    };
   }, [rotX, rotY]);
 
   // Determine expansion offset for the 3D cube panels

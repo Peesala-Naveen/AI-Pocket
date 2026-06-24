@@ -16,7 +16,7 @@ export default function App() {
   const [vaultState, setVaultState] = useState('closed'); // 'closed' | 'opening' | 'open' | 'closing'
   const { models, modelToEdit, setModelToEdit, confirmState, handleConfirm, handleCancel } = useModels();
 
-  // Track global mouse position and bind to CSS variables for dynamic cursor tracking effects
+  // Track global mouse & touch positions and bind to CSS variables for dynamic cursor tracking effects
   useEffect(() => {
     const handleGlobalMouseMove = (e) => {
       const x = (e.clientX / window.innerWidth) * 100;
@@ -24,8 +24,22 @@ export default function App() {
       document.documentElement.style.setProperty('--mouse-x', `${x}%`);
       document.documentElement.style.setProperty('--mouse-y', `${y}%`);
     };
+
+    const handleGlobalTouchMove = (e) => {
+      if (e.touches.length === 0) return;
+      const touch = e.touches[0];
+      const x = (touch.clientX / window.innerWidth) * 100;
+      const y = (touch.clientY / window.innerHeight) * 100;
+      document.documentElement.style.setProperty('--mouse-x', `${x}%`);
+      document.documentElement.style.setProperty('--mouse-y', `${y}%`);
+    };
+
     window.addEventListener('mousemove', handleGlobalMouseMove);
-    return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
+    window.addEventListener('touchmove', handleGlobalTouchMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove);
+      window.removeEventListener('touchmove', handleGlobalTouchMove);
+    };
   }, []);
 
   const handleVaultToggle = () => {

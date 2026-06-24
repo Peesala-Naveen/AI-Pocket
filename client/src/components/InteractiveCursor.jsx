@@ -33,17 +33,41 @@ export default function InteractiveCursor() {
       });
     };
 
+    const handleTouchMove = (e) => {
+      if (e.touches.length === 0) return;
+      const touch = e.touches[0];
+      const { clientX: x, clientY: y } = touch;
+      setCoords({ x, y });
+
+      ringX.set(x - 20);
+      ringY.set(y - 20);
+
+      setTrail((prev) => {
+        const newTrail = [...prev, { id: Math.random(), x, y }];
+        if (newTrail.length > 15) {
+          newTrail.shift();
+        }
+        return newTrail;
+      });
+    };
+
     const handleMouseDown = () => setClicked(true);
     const handleMouseUp = () => setClicked(false);
 
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
     window.addEventListener('mousedown', handleMouseDown);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchstart', handleMouseDown, { passive: true });
+    window.addEventListener('touchend', handleMouseUp, { passive: true });
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchmove', handleTouchMove);
       window.removeEventListener('mousedown', handleMouseDown);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchstart', handleMouseDown);
+      window.removeEventListener('touchend', handleMouseUp);
     };
   }, [ringX, ringY]);
 
