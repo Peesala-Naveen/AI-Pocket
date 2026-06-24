@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 
 export default function AIVaultContainer({ vaultState, onToggle, modelCount }) {
   const isClosed = vaultState === 'closed';
+  const draggedRef = useRef(false);
 
   // Motion values for smooth 360-degree rotation
   const rotX = useMotionValue(-15);
@@ -14,6 +15,12 @@ export default function AIVaultContainer({ vaultState, onToggle, modelCount }) {
   const smoothY = useSpring(rotY, springConfig);
 
   useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    let startRotX = rotX.get();
+    let startRotY = rotY.get();
+    let isTouching = false;
+
     const handleMouseMove = (e) => {
       const xPercent = e.clientX / window.innerWidth;
       const yPercent = e.clientY / window.innerHeight;
@@ -26,24 +33,56 @@ export default function AIVaultContainer({ vaultState, onToggle, modelCount }) {
       rotX.set(targetX);
     };
 
-    const handleTouchMove = (e) => {
+    const handleTouchStart = (e) => {
       if (e.touches.length === 0) return;
       const touch = e.touches[0];
-      const xPercent = touch.clientX / window.innerWidth;
-      const yPercent = touch.clientY / window.innerHeight;
+      startX = touch.clientX;
+      startY = touch.clientY;
+      startRotX = rotX.get();
+      startRotY = rotY.get();
+      isTouching = true;
+      draggedRef.current = false;
+    };
 
-      const targetY = (xPercent - 0.5) * 360;
-      const targetX = -(yPercent - 0.5) * 360;
+    const handleTouchMove = (e) => {
+      if (!isTouching || e.touches.length === 0) return;
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+
+      // If finger moved more than 5px, it's considered a drag
+      if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+        draggedRef.current = true;
+      }
+
+      // 1.5 sensitivity scaling factor makes dragging responsive on mobile screens
+      const sensitivity = 1.5;
+
+      const targetY = startRotY + deltaX * sensitivity;
+      const targetX = startRotX - deltaY * sensitivity;
 
       rotY.set(targetY);
       rotX.set(targetX);
     };
 
+    const handleTouchEnd = () => {
+      isTouching = false;
+      // In case click event doesn't fire, reset after a short delay
+      setTimeout(() => {
+        draggedRef.current = false;
+      }, 100);
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchend', handleTouchEnd, { passive: true });
+
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('touchstart', handleTouchStart);
       window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
     };
   }, [rotX, rotY]);
 
@@ -52,10 +91,18 @@ export default function AIVaultContainer({ vaultState, onToggle, modelCount }) {
   const translateDist = isExpanding ? 150 : 80; // Explodes open to 150px, collapses back to 80px
   const opacityVal = isExpanding ? 0.35 : 0.85;
 
+  const handleCubeClick = () => {
+    if (draggedRef.current) {
+      draggedRef.current = false;
+      return;
+    }
+    onToggle();
+  };
+
   return (
     <div className="vault-3d-scene">
       {/* 3D Perspective Wrapper */}
-      <div className="cube-wrapper" onClick={onToggle}>
+      <div className="cube-wrapper" onClick={handleCubeClick}>
         <motion.div
           className={`cube ${vaultState}`}
           style={{
