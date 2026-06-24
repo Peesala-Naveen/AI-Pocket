@@ -24,6 +24,7 @@ export function ModelProvider({ children }) {
   const [searchQuery, setSearchQueryState] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [modelToEdit, setModelToEdit] = useState(null);
 
   const debounceTimerRef = useRef(null);
 
@@ -69,6 +70,7 @@ export function ModelProvider({ children }) {
     try {
       const updated = await apiUpdateModel(id, data);
       setModels((prev) => prev.map((m) => (m._id === id ? updated : m)));
+      toast.success(`"${updated.name}" updated successfully!`);
       return updated;
     } catch (err) {
       const msg = err.response?.data?.message || 'Failed to update model';
@@ -141,6 +143,28 @@ export function ModelProvider({ children }) {
     };
   }, []);
 
+  const [confirmState, setConfirmState] = useState(null);
+
+  const confirm = useCallback((title, message, type = 'info') => {
+    return new Promise((resolve) => {
+      setConfirmState({ title, message, type, resolve });
+    });
+  }, []);
+
+  const handleConfirm = useCallback(() => {
+    if (confirmState) {
+      confirmState.resolve(true);
+      setConfirmState(null);
+    }
+  }, [confirmState]);
+
+  const handleCancel = useCallback(() => {
+    if (confirmState) {
+      confirmState.resolve(false);
+      setConfirmState(null);
+    }
+  }, [confirmState]);
+
   const value = useMemo(
     () => ({
       models,
@@ -154,8 +178,32 @@ export function ModelProvider({ children }) {
       deleteModel,
       setSearchQuery,
       refreshModels,
+      modelToEdit,
+      setModelToEdit,
+      confirmState,
+      confirm,
+      handleConfirm,
+      handleCancel,
     }),
-    [models, loading, error, searchQuery, searchResults, isSearching, addModel, updateModel, deleteModel, setSearchQuery, refreshModels]
+    [
+      models,
+      loading,
+      error,
+      searchQuery,
+      searchResults,
+      isSearching,
+      addModel,
+      updateModel,
+      deleteModel,
+      setSearchQuery,
+      refreshModels,
+      modelToEdit,
+      setModelToEdit,
+      confirmState,
+      confirm,
+      handleConfirm,
+      handleCancel,
+    ]
   );
 
   return <ModelContext.Provider value={value}>{children}</ModelContext.Provider>;

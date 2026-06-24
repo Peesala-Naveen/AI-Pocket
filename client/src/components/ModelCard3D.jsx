@@ -1,9 +1,23 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { HiExternalLink } from 'react-icons/hi';
+import { HiExternalLink, HiPencil, HiTrash } from 'react-icons/hi';
+import { useModels } from '../context/ModelContext';
 
-export default function ModelCard3D({ model, index }) {
+export default function ModelCard3D({ model, index, totalCount }) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { deleteModel, setModelToEdit, confirm } = useModels();
+
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    const confirmed = await confirm(
+      "Delete Model",
+      `Are you sure you want to delete "${model.name}"?`,
+      "danger"
+    );
+    if (confirmed) {
+      await deleteModel(model._id);
+    }
+  };
 
   // Close on Escape key
   useEffect(() => {
@@ -35,13 +49,27 @@ export default function ModelCard3D({ model, index }) {
       {/* ── Compact Card ── */}
       <motion.div
         className="model-card"
-        initial={{ opacity: 0, y: 40, rotateX: -10 }}
-        animate={{ opacity: 1, y: 0, rotateX: 0 }}
+        initial={{ opacity: 0, y: -250, scale: 0.1, rotateX: -20 }}
+        animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
+        exit={{
+          opacity: 0,
+          y: -250,
+          scale: 0.1,
+          rotateX: 20,
+          transition: {
+            delay: ((totalCount || 1) - 1 - index) * 0.03,
+            duration: 0.45,
+            type: 'spring',
+            stiffness: 120,
+            damping: 18,
+          },
+        }}
         transition={{
-          delay: index * 0.08,
-          duration: 0.6,
+          delay: index * 0.06,
           type: 'spring',
-          stiffness: 100,
+          stiffness: 65,
+          damping: 10,
+          mass: 1.1,
         }}
         whileHover={{
           y: -8,
@@ -55,6 +83,27 @@ export default function ModelCard3D({ model, index }) {
           className="model-card-inner"
           style={{ borderTopColor: model.color || '#6366f1' }}
         >
+          <div className="model-card-actions">
+            <button
+              className="model-card-action-btn edit-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                setModelToEdit(model);
+              }}
+              title="Edit Model"
+              aria-label="Edit Model"
+            >
+              <HiPencil />
+            </button>
+            <button
+              className="model-card-action-btn delete-btn"
+              onClick={handleDelete}
+              title="Delete Model"
+              aria-label="Delete Model"
+            >
+              <HiTrash />
+            </button>
+          </div>
           <div className="model-icon">{model.icon || '🤖'}</div>
           <h3 className="model-name">{model.name}</h3>
           <div className="model-category">

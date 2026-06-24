@@ -22,10 +22,24 @@ const INITIAL_FORM = {
   category: '',
 };
 
-export default function AddModelModal({ isOpen, onClose }) {
-  const { addModel } = useModels();
+export default function AddModelModal({ isOpen, onClose, modelToEdit }) {
+  const { addModel, updateModel, confirm } = useModels();
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
+
+  // Populate or reset form when modelToEdit or isOpen changes
+  useEffect(() => {
+    if (modelToEdit) {
+      setFormData({
+        name: modelToEdit.name || '',
+        link: modelToEdit.link || '',
+        description: modelToEdit.description || '',
+        category: modelToEdit.category || '',
+      });
+    } else {
+      setFormData(INITIAL_FORM);
+    }
+  }, [modelToEdit, isOpen]);
 
   // Close on Escape key
   useEffect(() => {
@@ -52,13 +66,26 @@ export default function AddModelModal({ isOpen, onClose }) {
       return;
     }
 
+    if (modelToEdit) {
+      const confirmed = await confirm(
+        "Save Changes",
+        "Are you sure you want to save changes to this model?",
+        "info"
+      );
+      if (!confirmed) return;
+    }
+
     try {
       setSubmitting(true);
-      await addModel(formData);
-      setFormData(INITIAL_FORM);
+      if (modelToEdit) {
+        await updateModel(modelToEdit._id, formData);
+      } else {
+        await addModel(formData);
+        setFormData(INITIAL_FORM);
+      }
       onClose();
     } catch {
-      toast.error('Failed to add model. Please try again.');
+      toast.error(modelToEdit ? 'Failed to update model. Please try again.' : 'Failed to add model. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -84,7 +111,7 @@ export default function AddModelModal({ isOpen, onClose }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h2 className="text-gradient">Add New Model</h2>
+              <h2 className="text-gradient">{modelToEdit ? 'Edit Model' : 'Add New Model'}</h2>
               <button className="close-btn" onClick={onClose} aria-label="Close modal">
                 <HiX />
               </button>
@@ -111,8 +138,8 @@ export default function AddModelModal({ isOpen, onClose }) {
                   type="url"
                   name="link"
                   value={formData.link}
-                  onChange={handleChange}
                   placeholder="https://..."
+                  onChange={handleChange}
                   required
                 />
               </div>
@@ -155,7 +182,13 @@ export default function AddModelModal({ isOpen, onClose }) {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary" disabled={submitting}>
-                  {submitting ? 'Adding…' : 'Add Model'}
+                  {submitting
+                    ? modelToEdit
+                      ? 'Saving…'
+                      : 'Adding…'
+                    : modelToEdit
+                    ? 'Save Changes'
+                    : 'Add Model'}
                 </button>
               </div>
             </form>

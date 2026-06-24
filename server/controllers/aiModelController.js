@@ -111,6 +111,43 @@ export const updateModel = async (req, res) => {
 
     const existing = checkExist.rows[0];
 
+    // Compute updated fields with fallbacks
+    const updatedName = name !== undefined ? (name !== null ? name.toString().trim() : '') : existing.name;
+    const updatedLink = link !== undefined ? (link !== null ? link.toString().trim() : '') : existing.link;
+    const updatedDescription = description !== undefined ? (description !== null ? description.toString().trim() : '') : existing.description;
+
+    // Validation for required fields
+    const validationErrors = {};
+    if (!updatedName) validationErrors.name = 'Name is required';
+    if (!updatedLink) validationErrors.link = 'Link is required';
+    if (!updatedDescription) validationErrors.description = 'Description is required';
+
+    if (Object.keys(validationErrors).length > 0) {
+      return res.status(400).json({
+        message: 'Validation error',
+        errors: validationErrors,
+      });
+    }
+
+    const updatedCategory = category !== undefined && category !== null && category !== ''
+      ? category.toString().trim()
+      : (existing.category || 'Other');
+
+    const updatedIcon = icon !== undefined && icon !== null && icon !== ''
+      ? icon.toString().trim()
+      : (existing.icon || '🤖');
+
+    const updatedColor = color !== undefined && color !== null && color !== ''
+      ? color.toString().trim()
+      : (existing.color || '#6C63FF');
+
+    let updatedTags;
+    if (tags !== undefined && tags !== null) {
+      updatedTags = Array.isArray(tags) ? tags : [tags];
+    } else {
+      updatedTags = existing.tags || [];
+    }
+
     const queryText = `
       UPDATE ai_models
       SET name = $1, link = $2, description = $3, category = $4, icon = $5, color = $6, tags = $7, updated_at = CURRENT_TIMESTAMP
@@ -119,13 +156,13 @@ export const updateModel = async (req, res) => {
     `;
 
     const values = [
-      name !== undefined ? name : existing.name,
-      link !== undefined ? link : existing.link,
-      description !== undefined ? description : existing.description,
-      category !== undefined ? category : existing.category,
-      icon !== undefined ? icon : existing.icon,
-      color !== undefined ? color : existing.color,
-      tags !== undefined ? tags : existing.tags,
+      updatedName,
+      updatedLink,
+      updatedDescription,
+      updatedCategory,
+      updatedIcon,
+      updatedColor,
+      updatedTags,
       parseInt(id),
     ];
 

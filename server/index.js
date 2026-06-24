@@ -14,21 +14,25 @@ app.use(helmet());
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
-  process.env.FRONTEND_URL
+  process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : null
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      const isAllowed = allowedOrigins.some(allowed => origin === allowed) || origin.endsWith('.vercel.app');
+      // Remove trailing slash if present
+      const normalizedOrigin = origin.replace(/\/$/, '');
+      const isAllowed = allowedOrigins.some(allowed => normalizedOrigin === allowed) || normalizedOrigin.endsWith('.vercel.app');
       if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));
       }
     },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
+    optionsSuccessStatus: 200, // standard success status code for preflight OPTIONS requests
   })
 );
 app.use(morgan('dev'));

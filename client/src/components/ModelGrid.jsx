@@ -1,7 +1,8 @@
+import { AnimatePresence } from 'framer-motion';
 import { useModels } from '../context/ModelContext';
 import ModelCard3D from './ModelCard3D';
 
-export default function ModelGrid() {
+export default function ModelGrid({ vaultState }) {
   const { models, searchResults, searchQuery, loading, isSearching } = useModels();
 
   const displayModels = searchQuery?.length >= 2 ? searchResults : models;
@@ -38,12 +39,21 @@ export default function ModelGrid() {
     );
   }
 
+  const isVisible = vaultState === 'open' || vaultState === 'opening' || vaultState === 'closing';
+
   // ── Grid ──
   return (
-    <div className="model-grid">
-      {displayModels.map((model, i) => (
-        <ModelCard3D key={model._id} model={model} index={i} />
-      ))}
+    <div className="model-grid-container" style={{ minHeight: isVisible ? 'auto' : '0' }}>
+      <AnimatePresence>
+        {isVisible && (
+          <div className="model-grid">
+            {displayModels.map((model, i) => (
+              <ModelCard3D key={model._id} model={model} index={i} totalCount={displayModels.length} />
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
