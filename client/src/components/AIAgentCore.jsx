@@ -43,8 +43,48 @@ export default function AIAgentCore({ vaultState, onToggleVault, onOpenAddModal 
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  const speechTimerRef = useRef(null);
+  const bubbleTimerRef = useRef(null);
+  const skipSystemBubbleRef = useRef(false);
+
+  const showBubbleWithMessage = (text, duration = 6000, skipSystem = false) => {
+    if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
+    if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
+
+    if (skipSystem) {
+      skipSystemBubbleRef.current = true;
+    }
+
+    setBubbleText(text);
+    setShowBubble(true);
+    setIsSpeaking(true);
+
+    speechTimerRef.current = setTimeout(() => setIsSpeaking(false), 2500);
+    bubbleTimerRef.current = setTimeout(() => {
+      setShowBubble(false);
+      if (skipSystem) {
+        skipSystemBubbleRef.current = false;
+      }
+    }, duration);
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      window.addEventListener('click', handleOutsideClick);
+    }
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, [showMenu]);
+
   // React to system status changes
   useEffect(() => {
+    if (skipSystemBubbleRef.current) return;
+
     let text = '';
     const companionType = gender === 'girl' ? 'Girl' : 'Boy';
     if (loading) {
@@ -67,25 +107,26 @@ export default function AIAgentCore({ vaultState, onToggleVault, onOpenAddModal 
     setShowBubble(true);
     setIsSpeaking(true);
 
-    const speechTimer = setTimeout(() => setIsSpeaking(false), 2500);
-    const bubbleTimer = setTimeout(() => {
+    if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
+    if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
+
+    speechTimerRef.current = setTimeout(() => setIsSpeaking(false), 2500);
+    bubbleTimerRef.current = setTimeout(() => {
       if (!loading && (!searchQuery || searchQuery.length < 2)) {
         setShowBubble(false);
       }
     }, 6000);
 
     return () => {
-      clearTimeout(speechTimer);
-      clearTimeout(bubbleTimer);
+      if (speechTimerRef.current) clearTimeout(speechTimerRef.current);
+      if (bubbleTimerRef.current) clearTimeout(bubbleTimerRef.current);
     };
   }, [vaultState, searchQuery, loading, models.length, gender]);
 
   // Screen Actions triggered by Avatar
   const handleRandomHighlight = () => {
-    setBubbleText('Scanning environment... Highlighting a random model node!');
-    setShowBubble(true);
-    setIsSpeaking(true);
-    setTimeout(() => setIsSpeaking(false), 2000);
+    setShowMenu(false);
+    showBubbleWithMessage('Scanning environment... Highlighting a random model node!');
 
     const cards = document.querySelectorAll('.model-card');
     if (cards.length > 0) {
@@ -95,24 +136,30 @@ export default function AIAgentCore({ vaultState, onToggleVault, onOpenAddModal 
         cards[randomIndex].click();
       }, 500);
     } else {
-      setBubbleText('Storage is empty! Unlock the vault first.');
+      showBubbleWithMessage('Storage is empty! Unlock the vault first.');
     }
   };
 
   const handleAction = (actionFn, msg) => {
-    setBubbleText(msg);
-    setShowBubble(true);
-    setIsSpeaking(true);
-    setTimeout(() => setIsSpeaking(false), 2000);
+    setShowMenu(false);
+    showBubbleWithMessage(msg);
     actionFn();
+  };
+
+  const handleAvatarClick = (e) => {
+    e.stopPropagation();
+    if (showMenu) {
+      setShowMenu(false);
+      showBubbleWithMessage('Grid active', 5000, true);
+    } else {
+      setShowMenu(true);
+    }
   };
 
   return (
     <div 
       className="ai-agent-core-container" 
       ref={containerRef}
-      onMouseEnter={() => setShowMenu(true)}
-      onMouseLeave={() => setShowMenu(false)}
     >
       {/* ── Dynamic Speech Bubble ── */}
       <AnimatePresence>
@@ -142,6 +189,7 @@ export default function AIAgentCore({ vaultState, onToggleVault, onOpenAddModal 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2 }}
+            onClick={(e) => e.stopPropagation()}
           >
             <button 
               onClick={() => handleAction(onToggleVault, vaultState === 'closed' ? 'Unlocking model vault...' : 'Securing storage container...')}
@@ -176,7 +224,7 @@ export default function AIAgentCore({ vaultState, onToggleVault, onOpenAddModal 
       </AnimatePresence>
 
       {/* ── Interactive 3D Holographic Human Avatar Head ── */}
-      <div className="ai-avatar-wrapper" onClick={() => setShowBubble(true)}>
+      <div className="ai-avatar-wrapper" onClick={handleAvatarClick}>
         {/* Orbital holographic rings */}
         <div className="avatar-halo ring-slow" />
         <div className="avatar-halo ring-fast" />
